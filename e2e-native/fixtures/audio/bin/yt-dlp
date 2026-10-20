@@ -1,0 +1,197 @@
+#!/usr/bin/env node
+// e2e stand-in for yt-dlp: answers the exact calls MXTP MKR (youtube.rs) and
+// its playlist sidecar (playlist_fetch.py) make, from a local catalog, and
+// "downloads" short synthetic sine-tone WAVs. Never touches the network.
+//   MXTP_E2E_YT_CATALOG  JSON catalog (see e2e-native/lib/audio.mjs ytCatalog)
+//   MXTP_E2E_YT_LOG      JSON-lines log of argv
+import fs from "node:fs";
+import path from "node:path";
+import zlib from "node:zlib";
+
+const argv = process.argv.slice(2);
+const catalog = JSON.parse(fs.readFileSync(process.env.MXTP_E2E_YT_CATALOG, "utf8"));
+if (process.env.MXTP_E2E_YT_LOG) {
+  fs.appendFileSync(process.env.MXTP_E2E_YT_LOG, JSON.stringify({ argv }) + "\n");
+}
+
+const value = (flag) => {
+  const index = argv.indexOf(flag);
+  return index >= 0 ? argv[index + 1] : undefined;
+};
+const has = (flag) => argv.includes(flag);
+const dash = argv.indexOf("--");
+const target = dash >= 0 ? argv[dash + 1] : argv[argv.length - 1];
+const playlists = catalog.playlists ?? [];
+const norm = (text) => String(text).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const playlistUrl = (list) => `https://www.youtube.com/playlist?list=${list.id}`;
+const videoUrl = (entry) => `https://www.youtube.com/watch?v=${entry.id}`;
+
+function fail(message, code = 1) {
+  process.stderr.write(`ERROR: ${message}\n`);
+  process.exit(code);
+}
+
+function resolveTarget(url) {
+  const parsed = new URL(url);
+  const list = parsed.searchParams.get("list");
+  if (list) {
+    const playlist = playlists.find((item) => item.id === list);
+    return playlist ? { playlist } : undefined;
+  }
+  const id = parsed.searchParams.get("v") || (parsed.hostname === "youtu.be" ? parsed.pathname.slice(1) : "");
+  for (const playlist of playlists) {
+    const index = playlist.entries.findIndex((entry) => entry.id === id);
+    if (index >= 0) return { playlist, entry: playlist.entries[index], index };
+  }
+  return undefined;
+}
+
+function wav(seconds, freq) {
+  const rate = 44100;
+  const channels = 2;
+  const frames = Math.round(seconds * rate);
+  const data = Buffer.alloc(frames * channels * 2);
+  for (let i = 0; i < frames; i += 1) {
+    const sample = Math.round(Math.sin((2 * Math.PI * freq * i) / rate) * 0.3 * 32767);
+    data.writeInt16LE(sample, i * 4);
+    data.writeInt16LE(sample, i * 4 + 2);
+  }
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + data.length, 4);
+  header.write("WAVEfmt ", 8);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(channels, 22);
+  header.writeUInt32LE(rate, 24);
+  header.writeUInt32LE(rate * channels * 2, 28);
+  header.writeUInt16LE(channels * 2, 32);
+  header.writeUInt16LE(16, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(data.length, 40);
+  return Buffer.concat([header, data]);
+}
+
+function png(size, [r, g, b]) {
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = (buf) => {
+    let c = 0xffffffff;
+    for (const byte of buf) c = crcTable[(c ^ byte) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type, body) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(body.length);
+    const typed = Buffer.concat([Buffer.from(type), body]);
+    const sum = Buffer.alloc(4);
+    sum.writeUInt32BE(crc(typed));
+    return Buffer.concat([len, typed, sum]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(size, 0);
+  ihdr.writeUInt32BE(size, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(size * 3).map((_, i) => [r, g, b][i % 3])]);
+  const raw = Buffer.concat(Array.from({ length: size }, () => row));
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", zlib.deflateSync(raw)),
+    chunk("IEND", Buffer.alloc(0))
+  ]);
+}
+
+function selectedIndexes(playlist) {
+  const spec = value("--playlist-items");
+  if (!spec) return playlist.entries.map((_, index) => index);
+  return spec.split(",").flatMap((part) => {
+    const [start, end] = part.split("-").map(Number);
+    return Array.from({ length: (end || start) - start + 1 }, (_, offset) => start + offset - 1);
+  }).filter((index) => index >= 0 && index < playlist.entries.length);
+}
+
+// Optional per-call delay so specs can catch "working" states on screen.
+if (catalog.delayMs && !has("--version")) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, catalog.delayMs);
+
+if (has("--version")) {
+  process.stdout.write("2026.09.01-e2e-stub\n");
+  process.exit(0);
+}
+if (catalog.failAll) fail(catalog.failAll);
+
+// youtube.rs album search: one JSON object per line.
+if (has("--dump-json") && /youtube\.com\/results\?/.test(target ?? "")) {
+  const query = norm(new URL(target).searchParams.get("search_query") ?? "");
+  for (const playlist of playlists) {
+    if (query.includes(norm(playlist.title))) {
+      process.stdout.write(JSON.stringify({ title: playlist.title, url: playlistUrl(playlist), webpage_url: playlistUrl(playlist), channel: playlist.channel }) + "\n");
+    }
+  }
+  process.exit(0);
+}
+
+// youtube.rs single-track search.
+if (has("--dump-json") && /^ytsearch\d*:/.test(target ?? "")) {
+  const query = norm(target.replace(/^ytsearch\d*:/, ""));
+  for (const playlist of playlists) {
+    for (const entry of playlist.entries) {
+      if (query.includes(norm(entry.title)) || entry.title.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).every((word) => query.includes(word))) {
+        process.stdout.write(JSON.stringify({ title: entry.title, url: videoUrl(entry), webpage_url: videoUrl(entry), channel: playlist.channel, duration: entry.duration }) + "\n");
+      }
+    }
+  }
+  process.exit(0);
+}
+
+const resolved = target ? resolveTarget(target) : undefined;
+if (!resolved) fail(`unsupported or unknown URL: ${target}`);
+const { playlist, entry, index } = resolved;
+
+// youtube.rs candidate probe.
+if (has("--dump-single-json")) {
+  process.stdout.write(JSON.stringify({
+    title: playlist.title,
+    channel: playlist.channel,
+    entries: playlist.entries.map((item) => ({ title: item.title, duration: item.duration, channel: playlist.channel, url: videoUrl(item) }))
+  }));
+  process.exit(0);
+}
+
+// playlist_fetch.py: playlist_details() and the title fallback.
+const printed = value("--print");
+if (printed) {
+  if (printed.includes("playlist_title")) {
+    process.stdout.write(entry ? "NA|NA\n" : `${playlist.title}|${playlist.entries.length}\n`);
+  } else {
+    process.stdout.write(`${entry ? entry.title : playlist.title}\n`);
+  }
+  process.exit(0);
+}
+
+const home = (value("--paths") ?? "").replace(/^home:/, "");
+if (!home) fail("missing --paths home:<dir>");
+
+// playlist_fetch.py: download_cover().
+if (has("--write-thumbnail")) {
+  if (!catalog.noCover) fs.writeFileSync(path.join(home, "cover.png"), png(96, playlist.coverRgb ?? [40, 120, 200]));
+  process.exit(0);
+}
+
+// playlist_fetch.py: download_audio().
+if (has("--extract-audio")) {
+  if (playlist.failDownload) fail(playlist.failDownload);
+  const indexes = entry ? [index] : selectedIndexes(playlist);
+  for (const itemIndex of indexes) {
+    const item = playlist.entries[itemIndex];
+    const name = entry ? `${item.title}.wav` : `${String(itemIndex + 1).padStart(3, "0")} - ${item.title}.wav`;
+    fs.writeFileSync(path.join(home, name), wav(item.duration, item.freq ?? 440 + itemIndex * 55));
+  }
+  process.exit(0);
+}
+
+fail(`unhandled yt-dlp call: ${argv.join(" ")}`);

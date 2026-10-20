@@ -1,0 +1,16 @@
+.git
+.github
+.audit-scratch
+.codex-*
+.superpowers
+.webview2-e2e
+artifacts
+coverage
+dist
+export
+node_modules
+src-tauri/binaries
+src-tauri/target
+test-results
+*.log
+e2e-track-*.wav

@@ -1,0 +1,51 @@
+services:
+  verify:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: verify
+    init: true
+    working_dir: /workspace
+    environment:
+      CI: "true"
+      LOCAL_UID: "${LOCAL_UID:-1000}"
+      LOCAL_GID: "${LOCAL_GID:-1000}"
+      CARGO_TARGET_DIR: /workspace/src-tauri/target
+    volumes:
+      - .:/workspace
+      - mxtp-node-modules:/workspace/node_modules
+      - mxtp-pnpm-store:/workspace/.pnpm-store
+      - mxtp-rust-target:/workspace/src-tauri/target
+      - mxtp-cargo-registry:/workspace/.cargo/registry
+      - mxtp-cargo-git:/workspace/.cargo/git
+
+  # Native Linux e2e: builds the release binary and drives it through
+  # tauri-driver + WebKitWebDriver under Xvfb. Run via scripts/e2e-native.sh.
+  e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: e2e
+    init: true
+    working_dir: /workspace
+    environment:
+      CI: "true"
+      LOCAL_UID: "${LOCAL_UID:-1000}"
+      LOCAL_GID: "${LOCAL_GID:-1000}"
+      CARGO_TARGET_DIR: /workspace/src-tauri/target
+      MXTP_MKR_IMAGEGEN: mock
+    volumes:
+      - .:/workspace
+      - mxtp-node-modules:/workspace/node_modules
+      - mxtp-pnpm-store:/workspace/.pnpm-store
+      - mxtp-rust-target:/workspace/src-tauri/target
+      - mxtp-cargo-registry:/workspace/.cargo/registry
+      - mxtp-cargo-git:/workspace/.cargo/git
+    command: ["sh", "e2e-native/run-in-container.sh"]
+
+volumes:
+  mxtp-node-modules:
+  mxtp-pnpm-store:
+  mxtp-rust-target:
+  mxtp-cargo-registry:
+  mxtp-cargo-git:

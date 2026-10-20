@@ -1,0 +1,26 @@
+[
+  {
+    "ts": "2026-03-01T18:00:00Z",
+    "ms_played": 207000,
+    "master_metadata_track_name": "Would?",
+    "master_metadata_album_artist_name": "Alice in Chains",
+    "master_metadata_album_album_name": "Dirt",
+    "spotify_track_uri": "spotify:track:fixture-would"
+  },
+  {
+    "ts": "2026-03-02T18:00:00Z",
+    "ms_played": 207000,
+    "master_metadata_track_name": "Would?",
+    "master_metadata_album_artist_name": "Alice in Chains",
+    "master_metadata_album_album_name": "Dirt",
+    "spotify_track_uri": "spotify:track:fixture-would"
+  },
+  {
+    "ts": "2026-03-03T18:00:00Z",
+    "ms_played": 149000,
+    "master_metadata_track_name": "Them Bones",
+    "master_metadata_album_artist_name": "Alice in Chains",
+    "master_metadata_album_album_name": "Dirt",
+    "spotify_track_uri": "spotify:track:fixture-them-bones"
+  }
+]

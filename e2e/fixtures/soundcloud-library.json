@@ -1,0 +1,28 @@
+{
+  "likes": [
+    {
+      "liked": true,
+      "track": {
+        "id": "fixture-soundgarden-outshined",
+        "title": "Outshined",
+        "album": "Badmotorfinger",
+        "genre": "Grunge",
+        "duration": 311000,
+        "permalink_url": "https://soundcloud.com/fixture/soundgarden-outshined",
+        "user": { "username": "Soundgarden" }
+      }
+    },
+    {
+      "liked": true,
+      "track": {
+        "id": "fixture-nirvana-drain-you",
+        "title": "Drain You",
+        "album": "Nevermind",
+        "genre": "Grunge",
+        "duration": 223000,
+        "permalink_url": "https://soundcloud.com/fixture/nirvana-drain-you",
+        "user": { "username": "Nirvana" }
+      }
+    }
+  ]
+}

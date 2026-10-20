@@ -1,0 +1,10 @@
+#!/bin/sh
+# Offline e2e stub for yt-dlp (MXTP_YTDLP_PATH). Every lookup/download fails
+# fast and deterministically, so no test ever touches YouTube. When
+# MXTP_E2E_STUB_LOG is set, each call is appended there so specs can count
+# how often the app shells out.
+if [ -n "${MXTP_E2E_STUB_LOG:-}" ]; then
+  printf 'yt-dlp %s\n' "$*" >> "$MXTP_E2E_STUB_LOG"
+fi
+echo "ERROR: [mxtp-e2e] yt-dlp is stubbed offline in the native e2e suite" >&2
+exit 1

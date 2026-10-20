@@ -1,0 +1,8 @@
+#!/bin/sh
+# Offline e2e stub for cdrskin, first on PATH. `--device_links` failing makes
+# list_burners return [] (burn.rs list_burners_linux), so no drive is ever
+# detected and no real burn path can start. Any other call fails too.
+if [ -n "${MXTP_E2E_STUB_LOG:-}" ]; then
+  printf 'cdrskin %s\n' "$*" >> "$MXTP_E2E_STUB_LOG"
+fi
+exit 1

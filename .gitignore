@@ -1,0 +1,56 @@
+# deps / build
+node_modules/
+dist/
+build/
+.vite/
+.cargo/
+.pnpm-store/
+test-results/
+coverage/
+artifacts/
+.webview2-e2e/
+e2e-track-*.wav
+__pycache__/
+*.py[cod]
+
+# Rust / Tauri
+target/
+src-tauri/target/
+src-tauri/gen/
+
+# brainstorm visual companion (ephemeral)
+.superpowers/
+
+# downloaded spec source artifacts (regenerable)
+specs/raw/
+
+# Disc Makers template payloads (multi-GB, re-downloadable; the distilled
+# CSV/MD guide maps at the top level stay tracked - they feed src/print/dimensions)
+docs/reference/discmakers-templates/[0-9]*/
+
+# Claude/Codex session plumbing (bridge logs, manifests, spawn findings)
+.claude-codex-log.md
+.codex-spawn-findings/
+.codex-session-changes/
+.codex-claude-handoff/
+
+# audit scratch: logs, live-test drivers, and a full LOCALAPPDATA backup (~800MB)
+.audit-scratch/
+
+# project runtime outputs
+**/export/
+
+# os / editor
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
+!.env.example
+
+# test and verification evidence written by the suites (never committed)
+pipeline/
+artifacts/
+
+# Windows sidecar binaries (ffmpeg, ffprobe, node, yt-dlp); supply your own, see README
+src-tauri/binaries/*.exe

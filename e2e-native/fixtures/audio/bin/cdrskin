@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+// e2e stand-in for cdrskin. No hardware is ever touched: it only answers the
+// probes MXTP MKR makes and logs every invocation.
+//   MXTP_E2E_CDRSKIN_MODE  none    --device_links lists no drive (exit 0)
+//                          drive   one MOCK BURNER drive; -minfo reports a blank 80-min CD-R
+//                          nomedia one drive; -minfo reports "No media" so a burn stops before writing
+//   MXTP_E2E_CDRSKIN_MODE_FILE  optional file holding the mode; read on every call so a
+//                          spec can plug a "drive" in or out without relaunching
+//   MXTP_E2E_CDRSKIN_LOG   JSON-lines log of argv
+// Any write request (-sao, -tao, -raw, -dao, blank=) is refused with exit 3:
+// the suite simulates burns only.
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
+const argv = process.argv.slice(2);
+const modeFile = process.env.MXTP_E2E_CDRSKIN_MODE_FILE;
+const mode = (modeFile && existsSync(modeFile) ? readFileSync(modeFile, "utf8").trim() : "") || process.env.MXTP_E2E_CDRSKIN_MODE || "none";
+if (process.env.MXTP_E2E_CDRSKIN_LOG) {
+  appendFileSync(process.env.MXTP_E2E_CDRSKIN_LOG, JSON.stringify({ argv, mode }) + "\n");
+}
+const has = (flag) => argv.some((arg) => arg === flag || arg.startsWith(flag));
+if (argv.some((arg) => ["-sao", "-tao", "-raw", "-dao"].includes(arg) || arg.startsWith("blank="))) {
+  process.stderr.write("e2e cdrskin stub: refusing a media write (simulate-only suite)\n");
+  process.exit(3);
+}
+if (has("--device_links")) {
+  if (mode !== "none") process.stdout.write("0  dev='/dev/sr9' rwrw-- :  'MOCK' 'BURNER'\n");
+  process.exit(0);
+}
+if (has("-minfo")) {
+  if (mode === "nomedia") {
+    process.stdout.write("Media current: none\nNo media inserted\n");
+    process.exit(0);
+  }
+  process.stdout.write("Media current: CD-R\nMedia status : is blank\nRemaining free: 79m59s70f\n");
+  process.exit(0);
+}
+process.stdout.write("cdrskin e2e stub 1.5.6\n");

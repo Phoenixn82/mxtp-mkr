@@ -1,0 +1,16 @@
+{
+  "bias": -5.4,
+  "weights": {
+    "title": 1.8,
+    "artist": 2.2,
+    "trackCoverage": 3.7,
+    "trackOrder": 2.1,
+    "duration": 1.0,
+    "count": 1.2,
+    "official": 0.8,
+    "badVariant": -3.0,
+    "searchRank": 0.2
+  },
+  "minimumConfidence": 0.78,
+  "minimumTrackCoverage": 0.7
+}

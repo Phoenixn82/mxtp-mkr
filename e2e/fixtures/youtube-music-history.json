@@ -1,0 +1,17 @@
+[
+  {
+    "header": "YouTube Music",
+    "title": "Watched Superunknown",
+    "titleUrl": "https://music.youtube.com/watch?v=fixture-superunknown",
+    "subtitles": [{ "name": "Soundgarden - Topic", "url": "https://www.youtube.com/channel/fixture" }],
+    "time": "2026-04-10T15:30:00Z",
+    "products": ["YouTube Music"]
+  },
+  {
+    "header": "YouTube",
+    "title": "Watched a non-music fixture",
+    "titleUrl": "https://www.youtube.com/watch?v=fixture-video",
+    "time": "2026-04-11T15:30:00Z",
+    "products": ["YouTube"]
+  }
+]

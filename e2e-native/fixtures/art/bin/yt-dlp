@@ -1,0 +1,5 @@
+#!/bin/sh
+# Offline stand-in for yt-dlp in the art specs: YouTube is out of this area,
+# so any search or download fails fast and deterministically.
+echo "ERROR: yt-dlp is stubbed out in the art e2e specs (offline)" >&2
+exit 1

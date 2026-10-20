@@ -1,0 +1,78 @@
+ARG NODE_VERSION=24.20.0
+ARG RUST_VERSION=1.98.0
+
+FROM node:${NODE_VERSION}-bookworm-slim AS node
+
+FROM rust:${RUST_VERSION}-bookworm AS verify
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    CI=true
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        build-essential \
+        cdrskin \
+        curl \
+        ffmpeg \
+        file \
+        gosu \
+        libayatana-appindicator3-dev \
+        libcdio-utils \
+        librsvg2-dev \
+        libssl-dev \
+        libwebkit2gtk-4.1-dev \
+        libxdo-dev \
+        pkg-config \
+        python3 \
+        wget \
+        yt-dlp \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && ln -s /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack \
+    && COREPACK_HOME=/opt/corepack corepack enable \
+    && COREPACK_HOME=/opt/corepack corepack prepare pnpm@11.25.0 --activate
+
+RUN rustup component add clippy rustfmt
+
+COPY --chmod=755 .docker/verify-entrypoint.sh /usr/local/bin/docker-verify-entrypoint
+
+WORKDIR /workspace
+
+ENTRYPOINT ["/usr/local/bin/docker-verify-entrypoint"]
+
+# Native end-to-end stage: the verify toolchain above plus what it takes to
+# drive the real release binary's WebKitGTK webview through tauri-driver under
+# a virtual X display. Built only by the compose `e2e` service.
+FROM verify AS e2e
+
+# tauri-driver is versioned independently of Tauri; 2.1.0 is the current stable
+# release on crates.io (published 2026-09-26). Bump deliberately.
+ARG TAURI_DRIVER_VERSION=2.1.0
+
+# webkit2gtk-driver: WebKitWebDriver, the native driver tauri-driver wraps.
+# xvfb + xauth: xvfb-run's virtual display. dbus: a session bus for
+#   dbus-run-session, so GTK/WebKit do not stall probing for one.
+# libgl1-mesa-dri + libegl-mesa0: Mesa's llvmpipe software rasterizer so the
+#   three.js/WebGL case preview renders without a GPU.
+# fonts: Latin, broad Unicode and colour emoji coverage for screenshots.
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        dbus \
+        dbus-x11 \
+        fonts-dejavu-core \
+        fonts-noto-color-emoji \
+        fonts-noto-core \
+        libegl-mesa0 \
+        libgl1-mesa-dri \
+        webkit2gtk-driver \
+        xauth \
+        xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN cargo install tauri-driver --version "${TAURI_DRIVER_VERSION}" --locked --root /usr/local \
+    && rm -rf /usr/local/cargo/registry /usr/local/cargo/git

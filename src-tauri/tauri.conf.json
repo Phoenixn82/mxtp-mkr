@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MXTP MKR",
+  "version": "0.1.0",
+  "identifier": "com.phoenix.mxtpmkr",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "security": {
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPLOCALDATA/MXTP MKR/**/*",
+          "$HOME/Music/Music/Music Library.musiclibrary/artwork/**/*",
+          "$HOME/Music/Apple Music/Apple Music Library.musiclibrary/artwork/**/*",
+          "$TEMP/mxtp_mkr_covers/**/*",
+          "$TEMP/mxtp_mkr_imagegen/**/*"
+        ]
+      }
+    },
+    "windows": [
+      {
+        "title": "MXTP MKR",
+        "width": 1280,
+        "height": 860
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "icon": ["icons/icon.ico", "icons/icon.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/32x32.png"],
+    "resources": {
+      "resources/album-match-model.json": "tools/album-match-model.json"
+    }
+  }
+}

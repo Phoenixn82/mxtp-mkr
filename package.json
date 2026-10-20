@@ -1,0 +1,53 @@
+{
+  "name": "mxtp-mkr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=24.20.0 <25",
+    "pnpm": "11.25.0"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "test": "node scripts/run-vitest-clean.mjs",
+    "test:coverage": "node scripts/run-vitest-clean.mjs --coverage",
+    "test:sidecar": "node scripts/run-sidecar-tests.mjs",
+    "test:watch": "vitest",
+    "e2e": "playwright test --headed --workers=1",
+    "e2e:native": "playwright test e2e/full-suite.spec.ts --headed --workers=1",
+    "e2e:native-linux": "bash scripts/e2e-native.sh",
+    "package:linux": "docker compose run --rm verify sh .docker/package-linux.sh",
+    "verify": "pnpm build && pnpm test && pnpm test:sidecar && cargo fmt --manifest-path src-tauri/Cargo.toml -- --check && cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets --all-features -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml --locked --all-targets --all-features",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@react-three/fiber": "^8.17.10",
+    "@tauri-apps/api": "^2.9.0",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-fs": "^2.5.1",
+    "pdf-lib": "^1.17.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.185.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@tauri-apps/cli": "^2.9.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.10.0",
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.7",
+    "@types/three": "^0.185.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/coverage-v8": "4.1.11",
+    "jsdom": "^27.3.0",
+    "selenium-webdriver": "4.50.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7",
+    "vitest": "4.1.11"
+  }
+}
